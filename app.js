@@ -1,14 +1,45 @@
+// Load Config
+var config = require('./config');
+
+// Load Modules
 var bodyParser   = require('body-parser'),
     cookieParser = require('cookie-parser'),
     express      = require('express'),
     favicon      = require('serve-favicon'),
     logger       = require('morgan'),
-    path         = require('path');
+    path         = require('path'),
+    Redis        = require("redis"),
+    winston      = require('winston');
 
 var routes = require('./routes/index'),
     users  = require('./routes/users');
 
 var app = express();
+
+// init Logging
+var logger = new (winston.Logger)({
+  transports: [
+    new (winston.transports.Console)({
+      colorize: true,
+      level: 'debug'
+    })
+  ]
+});
+
+logger.add("PostgreSQL", {
+  "connString": "user:pw@localhost:5432/db",
+  "level": "debug"
+});
+
+// init Redis
+var redis = Redis.createClient(config.redis.options);
+if (config.redis.hasOwnProperty("pass")) {
+  redis.auth(config.redis.pass);
+}
+
+redis.on('error', function (err) {
+  console.log(err);
+});
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
