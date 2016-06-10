@@ -16,12 +16,12 @@ var logger = new (winston.Logger)({
   transports: [
     new (require("winston-postgresql").PostgreSQL)({
       "connString": config.pg,
-      "tableName": "winston_logs",
-      "level": "debug"
+      "tableName" : "winston_logs",
+      "level"     : "debug"
     }),
     new (winston.transports.Console)({
       colorize: true,
-      level: 'debug'
+      level   : 'debug'
     })
   ]
 });
@@ -51,7 +51,7 @@ var redis = Redis.createClient(config.redis.options);
 
 redis.on('connect', function (err) {
   logger.info('connected to redis');
-  if (config.redis.hasOwnProperty("pass")) {
+  if (config.redis.hasOwnProperty('pass')) {
     logger.info('authenticating redis');
     redis.auth(config.redis.pass);
   }
@@ -64,9 +64,9 @@ redis.on('warning', function (err) {
 });
 
 // Load Internal Modules
-var voice = require('./module/voice')(db, config.ivona, logger);
+var voice = require('./module/voice')(db, config, logger);
 
-voice.say("hello");
+voice._sayLocal('hello');
 
 var routes = require('./routes/index'),
     users  = require('./routes/users'),
@@ -82,7 +82,7 @@ app.set('view engine', 'jade');
 // log access
 app.use(function (req, res, next) {
   clientip = req.ip;
-  if (req.headers['x-forwarded-for']){
+  if (req.headers['x-forwarded-for']) {
     clientip = req.headers['x-forwarded-for'];
   }
 
@@ -96,10 +96,12 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+var router = express.Router();
+router.use('/', routes);
+router.use('/api', api);
+router.use('/users', users);
 
-app.use('/', routes);
-app.use('/api', api);
-app.use('/users', users);
+app.use('/vesta', router);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -117,7 +119,7 @@ if (app.get('env') === 'development') {
     res.status(err.status || 500);
     res.render('error', {
       message: err.message,
-      error: err
+      error  : err
     });
   });
 }
@@ -128,7 +130,7 @@ app.use(function (err, req, res, next) {
   res.status(err.status || 500);
   res.render('error', {
     message: err.message,
-    error: {}
+    error  : {}
   });
 });
 

@@ -23,6 +23,7 @@
     "pg-large-object": "~1.0.1",
     "md5": "~2.1.0",
     "play-sound": "0.0.9",
-    "ivona-node": "~0.3.0"
+    "ivona-node": "~0.3.0",
+    "amqplib": "~0.4.2"
   }
 }
