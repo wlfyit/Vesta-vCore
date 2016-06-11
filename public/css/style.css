@@ -1,0 +1,53 @@
+@font-face {
+  font-family: 'xenophoneregular';
+  src: url('xenophone-webfont.eot');
+  src: url('xenophone-webfont.eot?#iefix') format('embedded-opentype'),
+  url('xenophone-webfont.woff') format('woff'),
+  url('xenophone-webfont.ttf') format('truetype'),
+  url('xenophone-webfont.svg#xenophoneregular') format('svg');
+  font-weight: normal;
+  font-style: normal;
+
+}
+
+/* Color Palate
+http://www.colourlovers.com/palette/2633577/Vesta
+*/
+a, a:hover, a:active {
+  text-decoration-style: dotted;
+}
+body {
+  background-color: #4D363F;
+}
+
+div#navhead {
+  height: 75px;
+}
+div#navhead h1 {
+  color: #B85E40;
+  font-family: 'xenophoneregular';
+  font-size: 72px;
+  margin-right: 30px;
+  margin-top: 20px;
+  text-align: right;
+}
+
+div.container {
+  background-color: #FFFFFF;
+}
+div.container img {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  /*border-radius: 25px;
+  box-shadow: 0px 5px 10px #000000;*/
+}
+
+/* navbar */
+ul#nav-sec-user i.icon-user, ul#nav-sec-user i.icon-off {
+  margin-top: 2px;
+  margin-right: 5px;
+}

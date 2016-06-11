@@ -2,14 +2,16 @@
 var config = require('./config');
 
 // Load Modules
-var bodyParser         = require('body-parser'),
-    cookieParser       = require('cookie-parser'),
-    express            = require('express'),
-    LargeObjectManager = require('pg-large-object').LargeObjectManager,
-    path               = require('path'),
-    pg                 = require('pg'),
-    Redis              = require("redis"),
-    winston            = require('winston');
+var bodyParser     = require('body-parser'),
+    cookieParser   = require('cookie-parser'),
+    express        = require('express'),
+    expressSession = require('express-session'),
+    passport       = require('passport'),
+    path           = require('path'),
+    pg             = require('pg'),
+    Redis          = require("redis"),
+    RedisStore     = require('connect-redis')(expressSession),
+    winston        = require('winston');
 
 // init Logging
 var logger = new (winston.Logger)({
@@ -66,11 +68,12 @@ redis.on('warning', function (err) {
 // Load Internal Modules
 var voice = require('./module/voice')(db, config, logger);
 
-voice._sayLocal('hello');
+// init Controllers
+var authController = require('./controllers/auth');
 
 var routes = require('./routes/index'),
     users  = require('./routes/users'),
-    api    = require('./routes/api');
+    api    = require('./routes/api')(voice, logger);
 
 
 var app = express();
@@ -81,7 +84,7 @@ app.set('view engine', 'jade');
 
 // log access
 app.use(function (req, res, next) {
-  clientip = req.ip;
+  var clientip = req.ip;
   if (req.headers['x-forwarded-for']) {
     clientip = req.headers['x-forwarded-for'];
   }
@@ -94,9 +97,42 @@ app.use(function (req, res, next) {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Configuring Passport
+app.use(expressSession({
+  store : new RedisStore({
+    client: redis,
+    pass  : config.redis.pass
+  }),
+  secret: config.secret
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+
 
 var router = express.Router();
+
+// Navbar
+router.use(function (req, res, next) {
+  if (req.user) {
+    req.navbar = [
+      {text: 'Home', context: '/app'},
+      {text: 'Users', context: '/app/users'},
+      {text: 'TyrBot', context: '/app/tyrbot'},
+      {text: 'Lights', context: '/app/lights'}
+    ];
+  }
+  else {
+    req.navbar = [
+      {text: 'Home', context: '/app'}
+    ];
+  }
+  next();
+});
+
+
+router.use(express.static(path.join(__dirname, 'public')));
 router.use('/', routes);
 router.use('/api', api);
 router.use('/users', users);

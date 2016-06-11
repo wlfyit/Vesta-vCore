@@ -1,9 +1,18 @@
 var express = require('express');
 var router = express.Router();
 
-/* GET users listing. */
-router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
-});
 
-module.exports = router;
+module.exports = function (voice, logger) {
+
+  router.post('/say', function (req, res, next) {
+    if (req.body.text && req.body.destination) {
+      voice.sayRemote(req.body.text, req.body.destination);
+      res.send({"status":200});
+    }
+
+  });
+
+  return router;
+};
+
+
