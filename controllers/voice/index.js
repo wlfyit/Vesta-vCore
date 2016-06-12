@@ -21,7 +21,7 @@ module.exports = function (db, config, logger) {
       logger.error(err);
     }
     conn.createChannel(function (err, ch) {
-      var ex   = 'voice';
+      var ex   = 'voiceController';
       var msg  = process.argv.slice(2).join(' ') || 'Hello World!';
 
       ch.assertExchange(ex, 'fanout', {durable: false});
@@ -42,7 +42,7 @@ module.exports = function (db, config, logger) {
             } else {
               VoiceController._ivonaRequest(text, function (err, result) {
                 if (err) {
-                  return logger.error('Unable to request voice', err);
+                  return logger.error('Unable to request voiceController', err);
                 }
                 ch.publish(ex, '', new Buffer(JSON.stringify(msg)));
                 logger.info('sent amqp message [' + msg + ']');
@@ -87,7 +87,7 @@ module.exports = function (db, config, logger) {
         if (result.rowCount > 0) {
           logger.warn('VHASH: ' + vhash + ' already exists in database.');
         } else {
-          logger.debug('retrieving voice into database');
+          logger.debug('retrieving voiceController into database');
           db.query('BEGIN', function (err, result) {
             if (err) {
               cb(err);
@@ -215,10 +215,10 @@ module.exports = function (db, config, logger) {
   };
 
   /*  VoiceController._ivonaGetFile = function (text, voiceObj, file, cb) {
-   logger.debug('retrieving voice into file %s', file);
+   logger.debug('retrieving voiceController into file %s', file);
    ivona.createVoice(text, {
    body: {
-   voice: voiceObj
+   voiceController: voiceObj
    }
    }).pipe(
    fs.createWriteStream(file)

@@ -1,0 +1,11 @@
+extends layout
+block content
+  form(action='/vesta/login',method='post')
+    div(class='row-fluid')
+      div(class='span4 offset3',style='text-align:center;')
+        input(type='text',name='username',style='width: 98%;')
+    div(class='row-fluid')
+      div(class='span4 offset3',style='text-align:center;')
+        input(type='password',name='password',style='width: 98%;')
+      div(class='span1',style='text-align:center;')
+        input(type='submit',value='*****',style='width: 100%;',class='btn btn-inverse')

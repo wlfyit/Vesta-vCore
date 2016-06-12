@@ -3,7 +3,6 @@ var config        = require('../config');
 var crypto        = require('crypto');
 var BasicStrategy = require('passport-http').BasicStrategy;
 var LocalStrategy = require('passport-local').Strategy;
-var passport      = require('passport');
 var pg            = require('pg');
 
 
@@ -15,7 +14,7 @@ console.log(hasj.digest('hex'));
 
 
 
-module.exports = function (db, config, logger) {
+module.exports = function (db, passport, config, logger) {
   var AuthController = {};
 
   passport.serializeUser(function (user, done) {
@@ -69,8 +68,8 @@ module.exports = function (db, config, logger) {
   passport.use(new LocalStrategy(verifyUser));
 
   AuthController.isAuthApp = passport.authenticate('local', {
-    successReturnToOrRedirect: '/app/',
-    failureRedirect: '/app/login',
+    successReturnToOrRedirect: '/vesta/',
+    failureRedirect: '/vesta/login',
     session: true
   });
 

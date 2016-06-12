@@ -65,15 +65,13 @@ redis.on('warning', function (err) {
   logger.warn(err);
 });
 
-// Load Internal Modules
-var voice = require('./module/voice')(db, config, logger);
-
 // init Controllers
-var authController = require('./controllers/auth');
+var voiceController = require('./controllers/voice')(db, config, logger);
+var authController  = require('./controllers/auth')(db,passport,config,logger);
 
-var routes = require('./routes/index'),
+var routes = require('./routes/index')(passport, logger),
     users  = require('./routes/users'),
-    api    = require('./routes/api')(voice, logger);
+    api    = require('./routes/api')(voiceController, logger);
 
 
 var app = express();
