@@ -5,14 +5,23 @@ var amqp               = require('amqplib/callback_api'),
     md5                = require('md5'),
     player             = require('./player');
 
-module.exports = function (db, config, logger) {
-  var sqlSelectPhrase = 'SELECT * FROM public.phrases WHERE voicehash = $1;';
-  var sqlInsertPhrase = 'INSERT INTO public.phrases(voicehash, name, language, gender, text, looid) ' +
-    'VALUES ($1, $2, $3, $4, $5, $6);';
 
+var sqlSelectPhrase = 'SELECT * FROM public.phrases WHERE voicehash = $1;';
+var sqlInsertPhrase = 'INSERT INTO public.phrases(voicehash, name, language, gender, text, looid) ' +
+  'VALUES ($1, $2, $3, $4, $5, $6);';
+
+module.exports = function (db, ks, config, logger) {
+  var ivona;
+  var voice;
   var lObjMan         = new LargeObjectManager(db);
-  var ivona           = new Ivona(config.ivona.apikey);
   var VoiceController = {};
+
+  ks.get('config:ivona:apikey', function (err, result) {
+    ivona = new Ivona(JSON.parse(result['config:ivona:apikey']));
+  });
+  ks.get('config:ivona:voice', function (err, result) {
+    voice = JSON.parse(result['config:ivona:voice']);
+  });
 
   // Connect to amqp queue
   var sendAmqp = null;
@@ -21,31 +30,30 @@ module.exports = function (db, config, logger) {
       logger.error(err);
     }
     conn.createChannel(function (err, ch) {
-      var ex   = 'voiceController';
-      var msg  = process.argv.slice(2).join(' ') || 'Hello World!';
-
+      var ex = 'voice';
       ch.assertExchange(ex, 'fanout', {durable: false});
 
 
       VoiceController.sayRemote = function (text, destination) {
-        VoiceController._voiceHash(text, config.ivona.voice.name, function (vhash) {
+        VoiceController._voiceHash(text, voice.name, function (vhash) {
           db.query(sqlSelectPhrase, [vhash], function (err, result) {
-            var msg = {
+            var msg       = {
               command    : 'say',
               destination: destination,
               vhash      : vhash
             };
+            var msgString = JSON.stringify(msg);
 
             if (result.rowCount > 0) {
-              ch.publish(ex, '', new Buffer(JSON.stringify(msg)));
-              logger.info('sent amqp message [' + msg + ']');
+              ch.publish(ex, '', new Buffer(msgString));
+              logger.info('sent amqp message [' + msgString + ']');
             } else {
               VoiceController._ivonaRequest(text, function (err, result) {
                 if (err) {
                   return logger.error('Unable to request voiceController', err);
                 }
-                ch.publish(ex, '', new Buffer(JSON.stringify(msg)));
-                logger.info('sent amqp message [' + msg + ']');
+                ch.publish(ex, '', new Buffer(msgString));
+                logger.info('sent amqp message [' + msgString + ']');
               })
             }
           })
@@ -56,7 +64,7 @@ module.exports = function (db, config, logger) {
 
 
   VoiceController.sayLocal = function (text) {
-    VoiceController._voiceHash(text, config.ivona.voice.name, function (vhash) {
+    VoiceController._voiceHash(text, voice.name, function (vhash) {
       // create filename
       var file = 'phrases/' + vhash + '.mp3';
 
@@ -76,13 +84,12 @@ module.exports = function (db, config, logger) {
   };
 
 
-
   VoiceController._voiceHash = function (text, voiceName, cb) {
     cb(md5(voiceName + '|' + text));
   };
 
   VoiceController._ivonaRequest = function (text, cb) {
-    VoiceController._voiceHash(text, config.ivona.voice.name, function (vhash) {
+    VoiceController._voiceHash(text, voice.name, function (vhash) {
       db.query(sqlSelectPhrase, [vhash], function (err, result) {
         if (result.rowCount > 0) {
           logger.warn('VHASH: ' + vhash + ' already exists in database.');
@@ -110,8 +117,8 @@ module.exports = function (db, config, logger) {
                 // take some time, so one should provide a
                 // callback to client.query.
                 db.query('COMMIT', function (err, result) {
-                  db.query(sqlInsertPhrase, [vhash, config.ivona.voice.name, config.ivona.voice.language,
-                    config.ivona.voice.gender, text, oid], function (err, result) {
+                  db.query(sqlInsertPhrase, [vhash, voice.name, voice.language, voice.gender, text, oid],
+                    function (err, result) {
                     if (err) {
                       cb(err);
                       return client.emit('error', err);
@@ -183,7 +190,7 @@ module.exports = function (db, config, logger) {
   };
 
   VoiceController._ivonaGetFile = function (text, cb) {
-    VoiceController._voiceHash(text, config.ivona.voice.name, function (vhash) {
+    VoiceController._voiceHash(text, voice.name, function (vhash) {
       var file = 'phrases/' + vhash + '.mp3';
 
       fs.stat(file, function (err, stat) {
@@ -213,24 +220,6 @@ module.exports = function (db, config, logger) {
 
     })
   };
-
-  /*  VoiceController._ivonaGetFile = function (text, voiceObj, file, cb) {
-   logger.debug('retrieving voiceController into file %s', file);
-   ivona.createVoice(text, {
-   body: {
-   voiceController: voiceObj
-   }
-   }).pipe(
-   fs.createWriteStream(file)
-   ).on('finish', function (result) {
-   var response = {
-   text: text,
-   file: file
-   };
-   cb(response)
-   }
-   );
-   };*/
 
   return VoiceController;
 };

@@ -1,5 +1,13 @@
+require('newrelic'); // Init New Relic
+
 // Load Config
 var config = require('./config');
+
+// Validation
+if (!config.vesta.hasOwnProperty('secret')) {
+  console.error('you must provide a vesta secret');
+  process.exit(1);
+}
 
 // Load Modules
 var bodyParser     = require('body-parser'),
@@ -50,13 +58,8 @@ connectDB();
 
 // init Redis
 var redis = Redis.createClient(config.redis.options);
-
 redis.on('connect', function (err) {
   logger.info('connected to redis');
-  if (config.redis.hasOwnProperty('pass')) {
-    logger.info('authenticating redis');
-    redis.auth(config.redis.pass);
-  }
 });
 redis.on('error', function (err) {
   logger.error(err);
@@ -65,9 +68,25 @@ redis.on('warning', function (err) {
   logger.warn(err);
 });
 
+if (config.redis.hasOwnProperty('pass')) {
+  redis.auth(config.redis.pass, function (err) {
+    logger.info('authenticated redis');
+  });
+}
+
 // init Controllers
-var voiceController = require('./controllers/voice')(db, config, logger);
-var authController  = require('./controllers/auth')(db,passport,config,logger);
+var ksController    = require('./controllers/ks')(db, redis, config, logger);
+var voiceController = require('./controllers/voice')(db, ksController, config, logger);
+var authController  = require('./controllers/auth')(db, passport, config, logger);
+
+ksController.set('config:wundergroundKey', "996b30714c28412f", function (err, result) {
+  if (err) {
+    console.error(err);
+  }
+  else {
+    console.log(result);
+  }
+});
 
 var routes = require('./routes/index')(passport, logger),
     users  = require('./routes/users'),
@@ -102,11 +121,10 @@ app.use(expressSession({
     client: redis,
     pass  : config.redis.pass
   }),
-  secret: config.secret
+  secret: config.vesta.secret
 }));
 app.use(passport.initialize());
 app.use(passport.session());
-
 
 
 var router = express.Router();
@@ -115,27 +133,32 @@ var router = express.Router();
 router.use(function (req, res, next) {
   if (req.user) {
     req.navbar = [
-      {text: 'Home', context: '/app'},
-      {text: 'Users', context: '/app/users'},
-      {text: 'TyrBot', context: '/app/tyrbot'},
-      {text: 'Lights', context: '/app/lights'}
+      {text: 'Home', context: '/vesta'},
+      {text: 'Users', context: '/vesta/users'},
+      {text: 'TyrBot', context: '/vesta/tyrbot'},
+      {text: 'Lights', context: '/vesta/lights'}
     ];
   }
   else {
     req.navbar = [
-      {text: 'Home', context: '/app'}
+      {text: 'Home', context: '/vesta'}
     ];
   }
   next();
 });
 
-
+// Request Routing
 router.use(express.static(path.join(__dirname, 'public')));
 router.use('/', routes);
 router.use('/api', api);
 router.use('/users', users);
 
 app.use('/vesta', router);
+
+//redirect root requests to /vesta context
+app.get('/', function (req, res, next) {
+  res.redirect('/vesta/');
+});
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -153,7 +176,10 @@ if (app.get('env') === 'development') {
     res.status(err.status || 500);
     res.render('error', {
       message: err.message,
-      error  : err
+      error  : err,
+      user   : req.user,
+      brand  : 'Error',
+      navbar : req.navbar
     });
   });
 }
@@ -164,7 +190,10 @@ app.use(function (err, req, res, next) {
   res.status(err.status || 500);
   res.render('error', {
     message: err.message,
-    error  : {}
+    error  : {},
+    user   : req.user,
+    brand  : 'Error',
+    navbar : req.navbar
   });
 });
 

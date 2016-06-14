@@ -5,15 +5,6 @@ var BasicStrategy = require('passport-http').BasicStrategy;
 var LocalStrategy = require('passport-local').Strategy;
 var pg            = require('pg');
 
-
-
-
-var hasj = crypto.createHmac('sha512', config.secret);
-hasj.update('asdf');
-console.log(hasj.digest('hex'));
-
-
-
 module.exports = function (db, passport, config, logger) {
   var AuthController = {};
 
@@ -42,7 +33,7 @@ module.exports = function (db, passport, config, logger) {
     getUserQuery = 'SELECT * FROM public.users WHERE lower(username) = lower($1) LIMIT 1;';
 
     db.query(getUserQuery, [username], function (err, result) {
-      var passHash = crypto.createHmac('sha512', config.secret);
+      var passHash = crypto.createHmac('sha512', config.vesta.secret);
       passHash.update(password);
 
       if (err) {
