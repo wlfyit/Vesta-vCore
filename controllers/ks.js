@@ -153,9 +153,6 @@ module.exports = function (db, redis, config, logger) {
               if (err) {
                 logger.error(err);
               }
-              else {
-                console.log(result);
-              }
             });
 
             return done(null, dbResult);

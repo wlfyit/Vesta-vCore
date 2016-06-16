@@ -1,15 +1,17 @@
 var express = require('express');
-var router = express.Router();
+var router  = express.Router();
 
 
-module.exports = function (voice, logger) {
+module.exports = function (auth, voice, logger) {
 
-  router.post('/say', function (req, res, next) {
-    if (req.body.text && req.body.destination) {
-      voice.sayRemote(req.body.text, req.body.destination);
-      res.send({"status":200});
-    }
+  // Voice API
+  router.get('/voice/phrases/:vhash', voice.routeGetPhrase);
+  router.get('/voice/phrases/:vhash/file', voice.routeGetPhraseFile);
+  router.post('/voice/say', voice.routeSay);
 
+  // Users API
+  router.get('/users/:user_id', function (req, res) {
+    auth.routeGetUser(req.params.user_id, req, res);
   });
 
   return router;

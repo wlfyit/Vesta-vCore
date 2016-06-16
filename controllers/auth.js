@@ -1,9 +1,11 @@
 // Load required packages
-var config        = require('../config');
 var crypto        = require('crypto');
 var BasicStrategy = require('passport-http').BasicStrategy;
 var LocalStrategy = require('passport-local').Strategy;
-var pg            = require('pg');
+
+var sqlGetUserByID        = 'SELECT * FROM public.users WHERE id = $1 LIMIT 1;';
+var sqlGetUserByUsername  = 'SELECT * FROM public.users WHERE lower(username) = lower($1) LIMIT 1;';
+var sqlUpdateUserLastSeen = 'UPDATE public.users SET last_seen=now() WHERE id=$1;';
 
 module.exports = function (db, passport, config, logger) {
   var AuthController = {};
@@ -13,9 +15,7 @@ module.exports = function (db, passport, config, logger) {
   });
 
   passport.deserializeUser(function (id, done) {
-    getUserQuery = 'SELECT * FROM public.users WHERE id = $1 LIMIT 1;';
-
-    db.query(getUserQuery, [id], function (err, result) {
+    db.query(sqlGetUserByID, [id], function (err, result) {
       var user = result.rows[0];
 
       delete user['password'];
@@ -24,15 +24,22 @@ module.exports = function (db, passport, config, logger) {
         return done(err);
       }
       else {
-        return done(err, user);
+        return done(null, user);
       }
-    });
+    })
   });
 
-  function verifyUser(username, password, callback) {
-    getUserQuery = 'SELECT * FROM public.users WHERE lower(username) = lower($1) LIMIT 1;';
+  function updateLastSeen(id) {
+    db.query(sqlUpdateUserLastSeen, [id], function (err, result) {
+      if (err)
+        return done(err);
 
-    db.query(getUserQuery, [username], function (err, result) {
+      return logger.debug('Updated last seen for id [' + id + ']');
+    })
+  }
+
+  function verifyUser(username, password, callback) {
+    db.query(sqlGetUserByUsername, [username], function (err, result) {
       var passHash = crypto.createHmac('sha512', config.vesta.secret);
       passHash.update(password);
 
@@ -46,6 +53,7 @@ module.exports = function (db, passport, config, logger) {
         var user = result.rows[0];
 
         delete user['password'];
+        updateLastSeen(user.id);
         return callback(null, user);
       }
       else {
@@ -54,17 +62,28 @@ module.exports = function (db, passport, config, logger) {
     });
   }
 
-
   passport.use(new BasicStrategy(verifyUser));
   passport.use(new LocalStrategy(verifyUser));
 
   AuthController.isAuthApp = passport.authenticate('local', {
     successReturnToOrRedirect: '/vesta/',
-    failureRedirect: '/vesta/login',
-    session: true
+    failureRedirect          : '/vesta/login',
+    session                  : true
   });
 
-  AuthController.isApiApp  = passport.authenticate('basic', {session: false});
+  AuthController.isApiApp = passport.authenticate('basic', {session: false});
+
+  AuthController.routeGetUser = function (username, req, res) {
+    db.query(sqlGetUserByUsername, [username], function (err, result) {
+      if (err)
+        res.send(err);
+
+      var userObj = result.rows[0];
+      delete userObj['password'];
+
+      res.json(userObj);
+    });
+  };
 
   return AuthController;
 };

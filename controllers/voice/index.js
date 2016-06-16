@@ -62,7 +62,6 @@ module.exports = function (db, ks, config, logger) {
     })
   });
 
-
   VoiceController.sayLocal = function (text) {
     VoiceController._voiceHash(text, voice.name, function (vhash) {
       // create filename
@@ -82,7 +81,6 @@ module.exports = function (db, ks, config, logger) {
       });
     });
   };
-
 
   VoiceController._voiceHash = function (text, voiceName, cb) {
     cb(md5(voiceName + '|' + text));
@@ -119,18 +117,18 @@ module.exports = function (db, ks, config, logger) {
                 db.query('COMMIT', function (err, result) {
                   db.query(sqlInsertPhrase, [vhash, voice.name, voice.language, voice.gender, text, oid],
                     function (err, result) {
-                    if (err) {
-                      cb(err);
-                      return client.emit('error', err);
-                    }
+                      if (err) {
+                        cb(err);
+                        return client.emit('error', err);
+                      }
 
-                    var response = {
-                      voicehash: vhash,
-                      text     : text,
-                      oid      : oid
-                    };
-                    cb(null, response);
-                  });
+                      var response = {
+                        voicehash: vhash,
+                        text     : text,
+                        oid      : oid
+                      };
+                      cb(null, response);
+                    });
                 });
               });
 
@@ -147,8 +145,6 @@ module.exports = function (db, ks, config, logger) {
   };
 
   VoiceController._ivonaDBToFile = function (vhash, cb) {
-
-
     db.query(sqlSelectPhrase, [vhash], function (err, result) {
       if (result.rowCount > 0) {
         var phrase = result.rows[0];
@@ -216,9 +212,92 @@ module.exports = function (db, ks, config, logger) {
           cb(err);
         }
       });
-
-
     })
+  };
+
+  VoiceController.routeGetPhrase     = function (req, res) {
+    if (req.params.vhash.match(/^[a-f0-9]{32}$/g)) {
+      db.query(sqlSelectPhrase, [req.params.vhash], function (err, result) {
+        if (result.rowCount > 0) {
+          var phrase = result.rows[0];
+          res.send(phrase)
+        }
+        else {
+          res.status(404);
+          res.send({'status': 404, 'error': 'Phrase not found'});
+        }
+      })
+    }
+    else if (req.params.vhash) {
+      res.status(400);
+      res.send({'status': 400, 'error': 'VHASH not in MD5 format'});
+    }
+    else {
+      res.status(400);
+      res.send({'status': 400, 'error': 'Missing Parameters'});
+    }
+  };
+  VoiceController.routeGetPhraseFile = function (req, res) {
+    if (req.params.vhash.match(/^[a-f0-9]{32}$/g)) {
+      db.query(sqlSelectPhrase, [req.params.vhash], function (err, result) {
+        if (result.rowCount > 0) {
+          var phrase = result.rows[0];
+
+          // When working with Large Objects, always use a transaction
+          db.query('BEGIN', function (err, result) {
+            if (err) {
+              res.status(500);
+              res.send({'status': 500});
+              return db.emit('error', err);
+            }
+
+            // If you are on a high latency connection and working with
+            // large LargeObjects, you should increase the buffer size
+            var bufferSize = 16384;
+            lObjMan.openAndReadableStream(phrase.looid, bufferSize, function (err, size, stream) {
+              if (err) {
+                res.status(500);
+                res.send({'status': 500, 'error': 'Unable to read the given large object'});
+                return logger.error('Unable to read the given large object', err);
+              }
+
+              logger.info('Streaming a large object with a total size of ', size);
+              stream.on('end', function () {
+                db.query('COMMIT', function (err, response) {
+                  if (err)
+                    return logger.error('Unable to read the given large object', err);
+                });
+              });
+
+              res.setHeader('content-type', 'audio/mpeg');
+              stream.pipe(res);
+            });
+          });
+        }
+        else {
+          res.status(404);
+          res.send({'status': 404, 'error': 'Phrase not found'});
+        }
+      })
+    }
+    else if (req.params.vhash) {
+      res.status(400);
+      res.send({'status': 400, 'error': 'VHASH not in MD5 format'});
+    }
+    else {
+      res.status(400);
+      res.send({'status': 400, 'error': 'Missing Parameters'});
+    }
+  };
+  VoiceController.routeSay           = function (req, res) {
+    if (req.body.text && req.body.destination) {
+      VoiceController.sayRemote(req.body.text, req.body.destination);
+      res.send({"status": 200});
+    }
+    else {
+      res.status(400);
+      res.send({'status': 400, 'error': 'Missing Parameters'});
+    }
   };
 
   return VoiceController;

@@ -79,19 +79,9 @@ var ksController    = require('./controllers/ks')(db, redis, config, logger);
 var voiceController = require('./controllers/voice')(db, ksController, config, logger);
 var authController  = require('./controllers/auth')(db, passport, config, logger);
 
-ksController.set('config:wundergroundKey', "996b30714c28412f", function (err, result) {
-  if (err) {
-    console.error(err);
-  }
-  else {
-    console.log(result);
-  }
-});
-
 var routes = require('./routes/index')(passport, logger),
-    users  = require('./routes/users'),
-    api    = require('./routes/api')(voiceController, logger);
-
+    users  = require('./routes/users')(authController, logger),
+    api    = require('./routes/api')(authController, voiceController, logger);
 
 var app = express();
 
