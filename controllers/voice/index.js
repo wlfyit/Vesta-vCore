@@ -270,6 +270,7 @@ module.exports = function (db, ks, config, logger) {
               });
 
               res.setHeader('content-type', 'audio/mpeg');
+              res.setHeader('Content-disposition', 'attachment; filename=' + req.params.vhash + '.mp3');
               stream.pipe(res);
             });
           });
