@@ -75,9 +75,10 @@ if (config.redis.hasOwnProperty('pass')) {
 }
 
 // init Controllers
-var ksController    = require('./controllers/ks')(db, redis, config, logger);
-var voiceController = require('./controllers/voice')(db, ksController, config, logger);
-var authController  = require('./controllers/auth')(db, passport, config, logger);
+var ksController      = require('./controllers/ks')(db, redis, config, logger);
+var voiceController   = require('./controllers/voice')(db, ksController, config, logger);
+var weatherController = require('./controllers/weather')(db, redis, ksController, logger);
+var authController    = require('./controllers/auth')(db, passport, config, logger);
 
 var routes = require('./routes/index')(passport, logger),
     users  = require('./routes/users')(authController, logger),
@@ -85,6 +86,8 @@ var routes = require('./routes/index')(passport, logger),
 
 var app = express();
 
+//ksController.set('config:weather:location', '37.74,-122.45', function (err, result) {});
+weatherController._updateData();
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -100,9 +103,8 @@ app.use(function (req, res, next) {
   next();
 });
 
-// uncomment after placing your favicon in /public
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 
 // Configuring Passport

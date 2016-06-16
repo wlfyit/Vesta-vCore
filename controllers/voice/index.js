@@ -87,12 +87,16 @@ module.exports = function (db, ks, config, logger) {
   };
 
   VoiceController._ivonaRequest = function (text, cb) {
+    VoiceController._ivonaFullRequest(text, voice, cb);
+  };
+
+  VoiceController._ivonaFullRequest = function (text, voice, cb) {
     VoiceController._voiceHash(text, voice.name, function (vhash) {
       db.query(sqlSelectPhrase, [vhash], function (err, result) {
         if (result.rowCount > 0) {
-          logger.warn('VHASH: ' + vhash + ' already exists in database.');
+          logger.warn('vhash [' + vhash + '] already exists in database.');
         } else {
-          logger.debug('retrieving voiceController into database');
+          logger.debug('retrieving voice into database');
           db.query('BEGIN', function (err, result) {
             if (err) {
               cb(err);
@@ -134,7 +138,7 @@ module.exports = function (db, ks, config, logger) {
 
               ivona.createVoice(text, {
                 body: {
-                  voice: config.ivona.voice
+                  voice: voice
                 }
               }).pipe(stream);
             });
