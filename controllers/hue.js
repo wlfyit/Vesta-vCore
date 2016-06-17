@@ -1,6 +1,6 @@
 var hue = require("node-hue-api");
 
-module.exports = function (ks, logger) {
+module.exports = function (redis, ks, logger) {
   var activeBridges     = [],
       HueController     = {},
       redisPrefix       = 'hue:',

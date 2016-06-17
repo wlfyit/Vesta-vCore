@@ -80,7 +80,7 @@ if (config.redis.hasOwnProperty('pass')) {
 var authController    = require('./controllers/auth')(db, passport, config, logger);
 var ksController      = require('./controllers/ks')(db, redis, config, logger);
 // Functions
-var hueController     = require('./controllers/hue')(ksController, logger);
+var hueController     = require('./controllers/hue')(redis, ksController, logger);
 var voiceController   = require('./controllers/voice')(db, ksController, config, logger);
 var weatherController = require('./controllers/weather')(db, redis, ksController, logger);
 
@@ -90,7 +90,7 @@ var routes = require('./routes/index')(passport, logger),
 
 var app = express();
 
-//ksController.set('config:weather:location', '37.74,-122.45', function (err, result) {});
+//ksController.set('', '', function (err, result) {});
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
