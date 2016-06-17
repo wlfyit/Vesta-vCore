@@ -1,6 +1,6 @@
 var https = require('https');
 
-var freshnessCheckInterval = 300; // 3 minutes in seconds
+var freshnessCheckInterval = 300; // 5 minutes in seconds
 var freshnessAge           = 3600; // 1 hour in seconds
 var cacheExpiration        = 21600; // 6 hours in seconds
 

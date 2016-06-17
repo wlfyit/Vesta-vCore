@@ -62,3 +62,18 @@ Say something in a part of the house
     "destination": "vestaremotesayname"
 }
 ```
+### Weather
+#### Weather Data - /vesta/api/weather/&lt;datatype&gt;
+###### Datatypes
++ alerts
++ current_observation
++ currenthurricane
++ forecast
++ hourly_forecast
++ lastresponse
++ moon_phase
++ query_zone
++ response
++ satellite
++ sun_phase
++ webcams
