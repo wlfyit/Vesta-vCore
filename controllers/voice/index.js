@@ -5,10 +5,11 @@ var amqp               = require('amqplib/callback_api'),
     md5                = require('md5'),
     player             = require('./player');
 
-
-var sqlSelectPhrase = 'SELECT * FROM public.phrases WHERE voicehash = $1;';
-var sqlInsertPhrase = 'INSERT INTO public.phrases(voicehash, name, language, gender, text, looid) ' +
-  'VALUES ($1, $2, $3, $4, $5, $6);';
+var sqlSelectPhrase      = 'SELECT * FROM public.phrases WHERE voicehash = $1;',
+    sqlInsertPhrase      = 'INSERT INTO public.phrases(voicehash, name, language, gender, text, looid) ' +
+      'VALUES ($1, $2, $3, $4, $5, $6);',
+    sqlPlainSearchPhrase = 'SELECT * FROM public.phrases WHERE to_tsvector(\'english\', text) ' +
+      '@@ plainto_tsquery(\'english\', $1);';
 
 module.exports = function (db, ks, config, logger) {
   var ivona;

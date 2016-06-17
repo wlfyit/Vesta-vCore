@@ -82,12 +82,11 @@ var authController    = require('./controllers/auth')(db, passport, config, logg
 
 var routes = require('./routes/index')(passport, logger),
     users  = require('./routes/users')(authController, logger),
-    api    = require('./routes/api')(authController, voiceController, logger);
+    api    = require('./routes/api')(authController, voiceController, weatherController, logger);
 
 var app = express();
 
 //ksController.set('config:weather:location', '37.74,-122.45', function (err, result) {});
-weatherController._updateData();
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
