@@ -10,6 +10,7 @@ if (!config.vesta.hasOwnProperty('secret')) {
 }
 
 // Load Modules
+require('es6-promise').polyfill();
 var bodyParser     = require('body-parser'),
     cookieParser   = require('cookie-parser'),
     express        = require('express'),
@@ -75,10 +76,13 @@ if (config.redis.hasOwnProperty('pass')) {
 }
 
 // init Controllers
+// Core
+var authController    = require('./controllers/auth')(db, passport, config, logger);
 var ksController      = require('./controllers/ks')(db, redis, config, logger);
+// Functions
+var hueController     = require('./controllers/hue')(ksController, logger);
 var voiceController   = require('./controllers/voice')(db, ksController, config, logger);
 var weatherController = require('./controllers/weather')(db, redis, ksController, logger);
-var authController    = require('./controllers/auth')(db, passport, config, logger);
 
 var routes = require('./routes/index')(passport, logger),
     users  = require('./routes/users')(authController, logger),
