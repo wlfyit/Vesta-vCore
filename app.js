@@ -79,7 +79,9 @@ if (config.redis.hasOwnProperty('pass')) {
 // Core
 var authController    = require('./controllers/auth')(db, passport, config, logger);
 var ksController      = require('./controllers/ks')(db, redis, config, logger);
-// Functions
+var OSCController     = require('./controllers/osc')(redis, ksController, logger);
+
+// Functions;
 var hueController     = require('./controllers/hue')(redis, ksController, logger);
 var voiceController   = require('./controllers/voice')(db, ksController, config, logger);
 var weatherController = require('./controllers/weather')(db, redis, ksController, logger);
