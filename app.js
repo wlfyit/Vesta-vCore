@@ -75,10 +75,22 @@ if (config.redis.hasOwnProperty('pass')) {
   });
 }
 
+// init AMQP
+// Connect to amqp queue
+var amqpConn = null;
+
+amqp.connect(config.amqp, function (err, conn) {
+  if (err) {
+    logger.error(err);
+  }
+  amqpConn = conn;
+});
+
 // init Controllers
 // Core
 var authController    = require('./controllers/auth')(db, passport, config, logger);
 var ksController      = require('./controllers/ks')(db, redis, config, logger);
+var eventController   = require('./controllers/event')(amqpConn, redis, ksController, logger);
 var OSCController     = require('./controllers/osc')(redis, ksController, logger);
 
 // Functions;
