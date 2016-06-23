@@ -34,7 +34,11 @@ module.exports = function (db, ks, config, logger) {
       var ex = 'voice';
       ch.assertExchange(ex, 'fanout', {durable: false});
 
-
+      /**
+       * say on remove node
+       * @param {string} text
+       * @param {string} destination
+       */
       VoiceController.sayRemote = function (text, destination) {
         VoiceController._voiceHash(text, voice.name, function (vhash) {
           db.query(sqlSelectPhrase, [vhash], function (err, result) {
@@ -63,6 +67,10 @@ module.exports = function (db, ks, config, logger) {
     })
   });
 
+  /**
+   * Say Phrase on local Vesta server
+   * @param {string} text - phrase to be spoken
+   */
   VoiceController.sayLocal = function (text) {
     VoiceController._voiceHash(text, voice.name, function (vhash) {
       // create filename
@@ -83,8 +91,15 @@ module.exports = function (db, ks, config, logger) {
     });
   };
 
-  VoiceController._voiceHash = function (text, voiceName, cb) {
-    cb(md5(voiceName + '|' + text));
+  /**
+   * Get hash to identiy phrase
+   * @param {string} text - text to be said
+   * @param {string} voiceName - Ivona Voice Name
+   * @param {Function} done - callback
+   * @private
+   */
+  VoiceController._voiceHash = function (text, voiceName, done) {
+    done(md5(voiceName + '|' + text));
   };
 
   VoiceController._ivonaRequest = function (text, cb) {
@@ -149,7 +164,13 @@ module.exports = function (db, ks, config, logger) {
     });
   };
 
-  VoiceController._ivonaDBToFile = function (vhash, cb) {
+  /**
+   * Write phrase fiel from DB to a file
+   * @param {string} vhash
+   * @param {Function} done
+   * @private
+   */
+  VoiceController._ivonaDBToFile = function (vhash, done) {
     db.query(sqlSelectPhrase, [vhash], function (err, result) {
       if (result.rowCount > 0) {
         var phrase = result.rows[0];
@@ -158,7 +179,7 @@ module.exports = function (db, ks, config, logger) {
         // When working with Large Objects, always use a transaction
         db.query('BEGIN', function (err, result) {
           if (err) {
-            cb(err);
+            done(err);
             return client.emit('error', err);
           }
 
@@ -167,13 +188,13 @@ module.exports = function (db, ks, config, logger) {
           var bufferSize = 16384;
           lObjMan.openAndReadableStream(phrase.looid, bufferSize, function (err, size, stream) {
             if (err) {
-              cb(err);
+              done(err);
               return logger.error('Unable to read the given large object', err);
             }
 
             logger.info('Streaming a large object with a total size of ', size);
             stream.on('end', function () {
-              db.query('COMMIT', cb);
+              db.query('COMMIT', done);
             });
 
             // Store it as an image
@@ -182,14 +203,18 @@ module.exports = function (db, ks, config, logger) {
           });
         });
       } else {
-        cb('notindb');
+        done('notindb');
         logger.warn('VHASH: ' + vhash + ' does not exist in database.');
       }
     });
-
-
   };
 
+  /**
+   * Get file from DB. If it doesn't exist, retrieve frmo ivona
+   * @param {string} text
+   * @param {Function} cb
+   * @private
+   */
   VoiceController._ivonaGetFile = function (text, cb) {
     VoiceController._voiceHash(text, voice.name, function (vhash) {
       var file = 'phrases/' + vhash + '.mp3';
